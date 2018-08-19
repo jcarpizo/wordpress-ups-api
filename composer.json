@@ -1,0 +1,15 @@
+{
+    "name": "jaspercarpizo/ups",
+    "description": "Wordpress UPS API",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Jasper Carpizo",
+            "email": "jcarpizo.it@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "gabrielbull/ups-api": "dev-master"
+    }
+}
