@@ -7,13 +7,6 @@ class UpsApi extends WP_REST_Controller
     const USER_ID = null;
     const PASSWORD = null;
 
-    private $shipment = null;
-
-    public function __construct(\Ups\Entity\Shipment $shipment)
-    {
-
-    }
-
     public function init()
     {
         if (!function_exists('register_rest_route')) {
@@ -23,7 +16,7 @@ class UpsApi extends WP_REST_Controller
         register_rest_route('ups/v1', '/shipment', [
                 [
                     'methods' => WP_REST_Server::CREATABLE,
-                    'callback' => array('UpsApi', 'post_shipment_details'),
+                    'callback' => array(__CLASS__, 'post_shipment_details'),
                 ]
             ]
         );
@@ -31,7 +24,7 @@ class UpsApi extends WP_REST_Controller
         register_rest_route('ups/v1', '/print/label', [
                 [
                     'methods' => WP_REST_Server::READABLE,
-                    'callback' => array('UpsApi', 'print_ups_label'),
+                    'callback' => array(__CLASS__, 'print_ups_label'),
                     'args' => [
                         [
                             'orderId' => [
@@ -53,7 +46,7 @@ class UpsApi extends WP_REST_Controller
         $shipper = $shipment->getShipper();
         $shipper->setShipperNumber($requestData->shipper_number);
         $shipper->setName($requestData->shipment_name);
-        $shipper->setAttentionName($requestData->shipment_name);
+        $shipper->setAttentionName($requestData->shipment_attention_name);
         $shipperAddress = $shipper->getAddress();
         $shipperAddress->setAddressLine1($requestData->shipment_address);
         $shipperAddress->setPostalCode($requestData->shipment_postal_code);
@@ -185,7 +178,11 @@ class UpsApi extends WP_REST_Controller
                 // var_dump($accept); // Accept holds the label and additional information
             }
         } catch (\Exception $e) {
-            return new WP_REST_Response($e->getMessage(), 400);
+            $message = [
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode()
+            ];
+            return new WP_REST_Response($message, 400);
         }
     }
 
