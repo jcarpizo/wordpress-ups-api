@@ -10,6 +10,7 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "gabrielbull/ups-api": "dev-master"
+        "gabrielbull/ups-api": "dev-master",
+        "swiftmailer/swiftmailer": "^6.1@dev"
     }
 }

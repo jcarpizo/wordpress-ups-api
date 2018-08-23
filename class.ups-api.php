@@ -66,7 +66,7 @@ class UpsApi extends WP_REST_Controller
         $address->setCountryCode($shipperAddress->getCountryCode());
         $shipFrom = new \Ups\Entity\ShipFrom();
         $shipFrom->setAddress($address);
-        $shipFrom->setName( $shipper->getAttentionName());
+        $shipFrom->setName($shipper->getAttentionName());
         $shipFrom->setAttentionName($shipper->getAttentionName());
         $shipFrom->setCompanyName($shipper->getAttentionName());
         $shipFrom->setEmailAddress($shipper->getEmailAddress());
@@ -106,7 +106,7 @@ class UpsApi extends WP_REST_Controller
 
         // Set service
         $service = new \Ups\Entity\Service;
-        $service->setCode(\Ups\Entity\Service::S_STANDARD);
+        $service->setCode(\Ups\Entity\Service::S_AIR_1DAY);
         $service->setDescription($service->getName());
         $shipment->setService($service);
 
@@ -124,18 +124,18 @@ class UpsApi extends WP_REST_Controller
         $package = new \Ups\Entity\Package();
         $package->getPackagingType()->setCode(\Ups\Entity\PackagingType::PT_PACKAGE);
         $package->getPackageWeight()->setWeight(1);
-        $unit = new \Ups\Entity\UnitOfMeasurement;
-        $unit->setCode(\Ups\Entity\UnitOfMeasurement::UOM_KGS);
-        $package->getPackageWeight()->setUnitOfMeasurement($unit);
+        $unit0 = new \Ups\Entity\UnitOfMeasurement;
+        $unit0->setCode(\Ups\Entity\UnitOfMeasurement::UOM_LBS);
+        $package->getPackageWeight()->setUnitOfMeasurement($unit0);
 
         // Set dimensions
         $dimensions = new \Ups\Entity\Dimensions();
         $dimensions->setHeight(1);
         $dimensions->setWidth(1);
         $dimensions->setLength(1);
-        $unit = new \Ups\Entity\UnitOfMeasurement;
-        $unit->setCode(\Ups\Entity\UnitOfMeasurement::UOM_CM);
-        $dimensions->setUnitOfMeasurement($unit);
+        $unit1 = new \Ups\Entity\UnitOfMeasurement;
+        $unit1->setCode(\Ups\Entity\UnitOfMeasurement::UOM_IN);
+        $dimensions->setUnitOfMeasurement($unit1);
         $package->setDimensions($dimensions);
 
         // Add descriptions because it is a package
@@ -152,22 +152,47 @@ class UpsApi extends WP_REST_Controller
         $rateInformation->setNegotiatedRatesIndicator(1);
         $shipment->setRateInformation($rateInformation);
 
-        // Get shipment info
         try {
             $api = new Ups\Shipping(self::ACCESS_KEY, self::USER_ID, self::PASSWORD);
 
             $confirm = $api->confirm(\Ups\Shipping::REQ_VALIDATE, $shipment);
-            //var_dump($confirm); // Confirm holds the digest you need to accept the result
 
             if ($confirm) {
                 $accept = $api->accept($confirm->ShipmentDigest);
-                //return new WP_REST_Response($accept, 200);
-                 var_dump($accept); // Accept holds the label and additional information
-            }//
+                $folder = get_template_directory() . '/assets/images/ups-label/';
+                if (!file_exists($folder)) {
+                    mkdir($folder, 0777, true);
+                }
+                $label_file = uniqid() . ".gif";
+                $base64_string = $accept->PackageResults->LabelImage->GraphicImage;
+                $imageFile = $folder . $label_file;
+                $ifp = fopen($imageFile, 'wb');
+                fwrite($ifp, base64_decode($base64_string));
+                fclose($ifp);
+                self::traceRecord($request);
+
+
+                $transport = (new Swift_SmtpTransport('smtp.gmail.com', 587))
+                    ->setUsername('jcarpizo.it@gmail.com')
+                    ->setPassword('J@8p3r15')->setEncryption('tls');
+                $mailer = new Swift_Mailer($transport);
+                $message = new Swift_Message();
+                $message->setSubject( 'Your UPS Label.');
+                $message->setFrom([$shipper->getEmailAddress() => $shipper->getAttentionName()]);
+                $message->addTo('alikhaky@royalmountie.com','Ali Khaky');
+                $message->addBcc('jasper.carpizo.dev@gmail.com','Jasper Carpizo');
+                $message->setBody($shipper->getAttentionName().' UPS Label Image');
+                $message->attach(Swift_Attachment::fromPath($imageFile));
+
+                $result = $mailer->send($message);
+
+                $message = [
+                    'message' => 'Successfully Created',
+                ];
+                return new WP_REST_Response($message, 200);
+            }
 
         } catch (\Exception $e) {
-
-          //  var_dump($order_id);
             $message = [
                 'error_message' => $e->getMessage(),
                 'error_code' => $e->getCode()
@@ -177,13 +202,46 @@ class UpsApi extends WP_REST_Controller
     }
 
 
-    public function print_ups_label($order_id)
+    public static function print_ups_label($folder, $accept)
     {
-        $label_file = $order_id . ".gif";
+        $label_file = uniqid() . ".gif";
         $base64_string = $accept->PackageResults->LabelImage->GraphicImage;
-        $ifp = fopen($label_file, 'wb');
+        $ifp = fopen($folder . $label_file, 'wb');
+        var_dump($ifp);
+        //$str = stream_get_contents($ifp);
         fwrite($ifp, base64_decode($base64_string));
         fclose($ifp);
+    }
+
+    public static function traceRecord($request)
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'ups';
+
+        return $wpdb->insert(
+            $table_name,
+            [
+                'shiptment_name' => $request['shipment_name'],
+                'shipment_attention_name' => $request['shipment_attention_name'],
+                'shipment_address' => $request['shipment_address'],
+                'shipment_postal_code' => $request['shipment_postal_code'],
+                'shipment_city' => $request['shipment_city'],
+                'shipment_province_code' => $request['shipment_province_code'],
+                'shipment_country_code' => $request['shipment_country_code'],
+                'shipment_email_address' => $request['shipment_email_address'],
+                'shipment_phone_number' => $request['shipment_phone_number'],
+                'to_address_one' => $request['toaddress_one'],
+                'to_address_postal_code' => $request['toaddress_postal_code'],
+                'to_address_city' => $request['toaddress_city'],
+                'to_address_province_code' => $request['toaddress_province_code'],
+                'to_address_countyr_code' => $request['toaddress_country_code'],
+                'to_company_name' => $request['tocompany_name'],
+                'to_company_attention_name' => $request['toaddress_attention_name'],
+                'to_company_email' => $request['toaddress_email'],
+                'to_company_phone_number' => $request['toaddress_phone_number'],
+            ]
+        );
     }
 
 }
