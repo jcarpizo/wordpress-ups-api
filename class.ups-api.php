@@ -18,8 +18,7 @@ class UpsApi extends WP_REST_Controller
                     'methods' => WP_REST_Server::CREATABLE,
                     'callback' => array(__CLASS__, 'post_shipment_details'),
                 ]
-            ]
-        );
+            ]);
 
         register_rest_route('ups/v1', '/print/label', [
                 [
@@ -33,8 +32,7 @@ class UpsApi extends WP_REST_Controller
                         ]
                     ]
                 ]
-            ]
-        );
+            ]);
     }
 
     public function post_shipment_details($request)
@@ -116,7 +114,7 @@ class UpsApi extends WP_REST_Controller
         }
 
         // Set description
-        $shipment->setDescription('test');
+        //$shipment->setDescription('test');
 
         // Add Package
         $package = new \Ups\Entity\Package();
@@ -135,15 +133,15 @@ class UpsApi extends WP_REST_Controller
         $unit1->setCode(\Ups\Entity\UnitOfMeasurement::UOM_IN);
         $dimensions->setUnitOfMeasurement($unit1);
         $package->setDimensions($dimensions);
-
         // Add descriptions because it is a package
-        $package->setDescription('XX');
-
+        //$package->setDescription('XX');
         // Add this package
         $shipment->addPackage($package);
 
-        $shipment->setPaymentInformation(new \Ups\Entity\PaymentInformation('prepaid',
-            (object)array('AccountNumber' => getenv('SHIPPER_NO'))));
+        $shipment->setPaymentInformation(new \Ups\Entity\PaymentInformation(
+            'prepaid',
+            (object)array('AccountNumber' => getenv('SHIPPER_NO'))
+        ));
 
         // Ask for negotiated rates (optional)
         $rateInformation = new \Ups\Entity\RateInformation;
@@ -156,7 +154,6 @@ class UpsApi extends WP_REST_Controller
             $confirm = $api->confirm(\Ups\Shipping::REQ_VALIDATE, $shipment);
 
             if ($confirm) {
-
                 $accept = $api->accept($confirm->ShipmentDigest);
                 $folder = get_template_directory() . '/assets/images/ups-label/';
                 if (!file_exists($folder)) {
@@ -184,14 +181,16 @@ class UpsApi extends WP_REST_Controller
                 $message->attach(Swift_Attachment::fromPath($imageFile));
 
                 $result = $mailer->send($message);
-
-                $message = [
-                    'data' => ['shipment_identification_no' => $confirm->ShipmentIdentificationNumber],
-                    'message' => 'Successfully Created',
-                ];
-                return new WP_REST_Response($message, 200);
+                if ($result) {
+                    $message = [
+                        'data' => ['shipment_identification_no' => $confirm->ShipmentIdentificationNumber],
+                        'message' => 'Successfully Created',
+                    ];
+                    return new WP_REST_Response($message, 200);
+                } else {
+                    return new WP_REST_Response(['error_message' => 'Email failed'], 400);
+                }
             }
-
         } catch (\Exception $e) {
             $message = [
                 'error_message' => $e->getMessage(),
@@ -205,20 +204,11 @@ class UpsApi extends WP_REST_Controller
     {
         global $wpdb;
 
-        $table_name = $wpdb->prefix . 'ups';
+        $table_name = $wpdb->prefix . 'ups_shipment';
 
         return $wpdb->insert(
             $table_name,
             [
-                'shiptment_name' => $request['shipment_name'],
-                'shipment_attention_name' => $request['shipment_attention_name'],
-                'shipment_address' => $request['shipment_address'],
-                'shipment_postal_code' => $request['shipment_postal_code'],
-                'shipment_city' => $request['shipment_city'],
-                'shipment_province_code' => $request['shipment_province_code'],
-                'shipment_country_code' => $request['shipment_country_code'],
-                'shipment_email_address' => $request['shipment_email_address'],
-                'shipment_phone_number' => $request['shipment_phone_number'],
                 'to_address_one' => $request['toaddress_one'],
                 'to_address_postal_code' => $request['toaddress_postal_code'],
                 'to_address_city' => $request['toaddress_city'],
@@ -229,9 +219,8 @@ class UpsApi extends WP_REST_Controller
                 'to_company_email' => $request['toaddress_email'],
                 'to_company_phone_number' => $request['toaddress_phone_number'],
                 'ups_label' => $imageFile,
-                'order_id' => $confirm->ShipmentIdentificationNumber
+                'shipment_identification_no' => $confirm->ShipmentIdentificationNumber
             ]
         );
     }
-
 }
