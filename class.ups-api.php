@@ -113,10 +113,7 @@ class UpsApi extends WP_REST_Controller
 
                 self::traceRecord($request, $label_file, $confirm);
 
-                $transport = (new Swift_SmtpTransport(getenv('EMAIL_SMTP'), getenv('EMAIL_PORT')))
-                    ->setUsername(getenv('EMAIL_USERNAME'))
-                    ->setPassword(getenv('EMAIL_PASSWORD'))
-                    ->setEncryption(getenv('EMAIL_ENCRYPTION'));
+                $transport = new Swift_SendmailTransport('/usr/sbin/sendmail -bs');
                 $mailer = new Swift_Mailer($transport);
                 $message = new Swift_Message();
                 $message->setSubject('Your UPS Label.');

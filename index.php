@@ -27,7 +27,7 @@
     <br/>
     <div class="row">
 
-        <form action="http://localhost/wordpress/index.php/wp-json/ups/v1/shipment" method="post">
+        <form method="post">
             <div class="col-md-6">
                 <div class="alert alert-dismissible fade in" role="alert">
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
@@ -80,28 +80,28 @@
         integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
         crossorigin="anonymous"></script>
 <script>
-    $('#submit').click(function () {
-        var $btn = $(this).button('loading');
-        $.post("http://localhost/wordpress/index.php/wp-json/ups/v1/shipment",
-            {
-                toaddress_one: $("input[name=toaddress_one]").val(),
-                toaddress_postal_code: $("input[name=toaddress_postal_code]").val(),
-                toaddress_city: $("input[name=toaddress_city]").val(),
-                toaddress_province_code: $("input[name=toaddress_province_code]").val(),
-                toaddress_country_code: $("input[name=toaddress_country_code]").val(),
-                tocompany_name: $("input[name=tocompany_name]").val(),
-                toaddress_email: $("input[name=toaddress_email]").val(),
-                toaddress_phone_number: $("input[name=toaddress_phone_number]").val(),
-            })
-            .done(function (data) {
-                $('.alert').text(data.message).addClass('alert-success');
-                $btn.button('reset')
-            })
-            .fail(function (error) {
-                $('.alert').text('Error').addClass('alert-warning');
-                $btn.button('reset')
-            });
-    });
+   $('#submit').click(function () {
+       var $btn = $(this).button('loading');
+       $.post("https://godigitalape.com/wp-json/ups/v1/shipment",
+           {
+               toaddress_one: $("input[name=toaddress_one]").val(),
+               toaddress_postal_code: $("input[name=toaddress_postal_code]").val(),
+               toaddress_city: $("input[name=toaddress_city]").val(),
+               toaddress_province_code: $("input[name=toaddress_province_code]").val(),
+               toaddress_country_code: $("input[name=toaddress_country_code]").val(),
+               tocompany_name: $("input[name=tocompany_name]").val(),
+               toaddress_email: $("input[name=toaddress_email]").val(),
+               toaddress_phone_number: $("input[name=toaddress_phone_number]").val(),
+           })
+           .done(function (data) {
+               $('.alert').text(data.message).addClass('alert-success');
+               $btn.button('reset')
+           })
+           .fail(function (error) {
+               $('.alert').text('Error').addClass('alert-warning');
+               $btn.button('reset')
+           });
+   });
 </script>
 
 </body>
