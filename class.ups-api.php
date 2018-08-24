@@ -177,8 +177,17 @@ class UpsApi extends WP_REST_Controller
                 $message->setSubject('Your UPS Label.');
                 $message->setFrom([$shipper->getEmailAddress() => $shipper->getAttentionName()]);
                 $message->addTo($request['toaddress_email'], $request['tocompany_name']);
-                $message->setBody($shipper->getAttentionName() . ' UPS Label Image');
-                $message->attach(Swift_Attachment::fromPath($imageFile));
+                $message->setBody(
+                    '<html>' .
+                    ' <body>' .
+                    '  UPS Label / Shipment Identification Number <br/>'.$confirm->ShipmentIdentificationNumber.' <img src="' .
+                    $message->embed(Swift_Image::fromPath($imageFile)) .
+                    '" alt="Image" />' .
+                    ' </body>' .
+                    '</html>',
+                    'text/html'
+                );
+                $message->attach(Swift_Attachment::fromPath($imageFile)->setDisposition('inline'));
 
                 $result = $mailer->send($message);
                 if ($result) {
@@ -215,7 +224,7 @@ class UpsApi extends WP_REST_Controller
                 'to_address_province_code' => $request['toaddress_province_code'],
                 'to_address_countyr_code' => $request['toaddress_country_code'],
                 'to_company_name' => $request['tocompany_name'],
-                'to_company_attention_name' => $request['toaddress_attention_name'],
+                'to_company_attention_name' => $request['tocompany_name'],
                 'to_company_email' => $request['toaddress_email'],
                 'to_company_phone_number' => $request['toaddress_phone_number'],
                 'ups_label' => $imageFile,
