@@ -26,44 +26,6 @@
         <form action="http://localhost/wordpress/index.php/wp-json/ups/v1/shipment" method="post">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label>Shipper Name</label>
-                    <input type="text" class="form-control" name="shipment_name" value="Digital Ape Dental Lab" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Shipper Attention Name</label>
-                    <input type="text" class="form-control" name="shipment_attention_name" value="Digital Ape Full Arch Solutions" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Shipper Address</label>
-                    <input type="text" class="form-control" name="shipment_address" value="1918 University Business Drive" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Shipper Postal Code</label>
-                    <input type="text" class="form-control" name="shipment_postal_code" value="75071" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Shipper City</label>
-                    <input type="text" class="form-control" name="shipment_city" value="MCKINNEY" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Shipper Province State Code</label>
-                    <input type="text" class="form-control" name="shipment_province_code" value="TX" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Shipper Country Code</label>
-                    <input type="text" class="form-control" name="shipment_country_code" value="US" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Shipper Email Address</label>
-                    <input type="text" class="form-control" name="shipment_email_address" value="robert@digitalapedentallabs.com" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Shipper Phone</label>
-                    <input type="text" class="form-control" name="shipment_phone_number" value="214-973-5225" readonly>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
                     <label>To Address Line 1</label>
                     <input type="text" class="form-control" name="toaddress_one" value="405 Slide Road">
                 </div>
@@ -85,21 +47,20 @@
                 </div>
                 <div class="form-group">
                     <label>Company Name</label>
-                    <input type="text" class="form-control" name="tocompany_name" value="Abbeville Dentistry">
-                </div>
-                <div class="form-group">
-                    <label>Company Attention Name</label>
-                    <input type="text" class="form-control" name="toaddress_attention_name" value="Abbeville Dentistry">
+                    <input type="text" class="form-control" name="tocompany_name" value="Test Company">
                 </div>
                 <div class="form-group">
                     <label>Company Email Address</label>
-                    <input type="text" class="form-control" name="toaddress_email" value="apebsworth@abbevilledentistry.com">
+                    <input type="text" class="form-control" name="toaddress_email" value="jasper.carpizo.dev@gmail.com">
                 </div>
                 <div class="form-group">
                     <label>Company Phone</label>
-                    <input type="text" class="form-control" name="toaddress_phone_number" value="(806) 712-4082">
+                    <input type="text" class="form-control" name="toaddress_phone_number" value="(806) 722-4032">
                 </div>
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary btn-block">Submit</button>
+                </div>
             </div>
         </form>
     </div>

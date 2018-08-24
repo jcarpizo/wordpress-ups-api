@@ -11,6 +11,7 @@
     "minimum-stability": "dev",
     "require": {
         "gabrielbull/ups-api": "dev-master",
-        "swiftmailer/swiftmailer": "^6.1@dev"
+        "swiftmailer/swiftmailer": "^6.1@dev",
+        "vlucas/phpdotenv": "^2.5@dev"
     }
 }

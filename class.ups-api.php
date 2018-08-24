@@ -1,15 +1,14 @@
 <?php
 
+$dotenv = new Dotenv\Dotenv(__DIR__);
+$dotenv->load();
+
 class UpsApi extends WP_REST_Controller
 {
 
-    const ACCESS_KEY = '7D4D06F2836E47ED';
-    const USER_ID = 'BigUglyApe';
-    const PASSWORD = 'DigiApe2020!!';
-    const SHIPPER_NO = '149V7W';
-
     public function init()
     {
+
         if (!function_exists('register_rest_route')) {
             return false;
         }
@@ -43,18 +42,18 @@ class UpsApi extends WP_REST_Controller
 
         $shipment = new Ups\Entity\Shipment;
         $shipper = $shipment->getShipper();
-        $shipper->setShipperNumber(self::SHIPPER_NO);
-        $shipper->setName($request['shipment_name']);
-        $shipper->setAttentionName($request['shipment_attention_name']);
+        $shipper->setShipperNumber(getenv('SHIPPER_NO'));
+        $shipper->setName(getenv('SHIPPER_NAME'));
+        $shipper->setAttentionName(getenv('SHIPPER_ATTENTION_NAME'));
         $shipperAddress = $shipper->getAddress();
-        $shipperAddress->setAddressLine1($request['shipment_address']);
-        $shipperAddress->setPostalCode($request['shipment_postal_code']);
-        $shipperAddress->setCity($request['shipment_city']);
-        $shipperAddress->setStateProvinceCode($request['shipment_province_code']); // required in US
-        $shipperAddress->setCountryCode($request['shipment_country_code']);
+        $shipperAddress->setAddressLine1(getenv('SHIPPER_ADDRESS_ONE'));
+        $shipperAddress->setPostalCode(getenv('SHIPPER_POSTAL_CODE'));
+        $shipperAddress->setCity(getenv('SHIPPER_CITY'));
+        $shipperAddress->setStateProvinceCode(getenv('SHIPPER_STATE_PROVINCE_CODE')); // required in US
+        $shipperAddress->setCountryCode(getenv('SHIPPER_COUNTRY_CODE'));
         $shipper->setAddress($shipperAddress);
-        $shipper->setEmailAddress($request['shipment_email_address']);
-        $shipper->setPhoneNumber($request['shipment_phone_number']);
+        $shipper->setEmailAddress(getenv('SHIPPER_EMAIL_ADDRESS'));
+        $shipper->setPhoneNumber(getenv('SHIPPER_PHONE_NUMBER'));
         $shipment->setShipper($shipper);
 
         // From address
@@ -73,7 +72,6 @@ class UpsApi extends WP_REST_Controller
         $shipFrom->setPhoneNumber($shipper->getPhoneNumber());
         $shipment->setShipFrom($shipFrom);
 
-
         // To address
         $address = new \Ups\Entity\Address();
         $address->setAddressLine1($request['toaddress_one']);
@@ -84,7 +82,7 @@ class UpsApi extends WP_REST_Controller
         $shipTo = new \Ups\Entity\ShipTo();
         $shipTo->setAddress($address);
         $shipTo->setCompanyName($request['tocompany_name']);
-        $shipTo->setAttentionName($request['toaddress_attention_name']);
+        $shipTo->setAttentionName($shipTo->getCompanyName());
         $shipTo->setEmailAddress($request['toaddress_email']);
         $shipTo->setPhoneNumber($request['toaddress_phone_number']);
         $shipment->setShipTo($shipTo);
@@ -145,7 +143,7 @@ class UpsApi extends WP_REST_Controller
         $shipment->addPackage($package);
 
         $shipment->setPaymentInformation(new \Ups\Entity\PaymentInformation('prepaid',
-            (object)array('AccountNumber' => self::SHIPPER_NO)));
+            (object)array('AccountNumber' => getenv('SHIPPER_NO'))));
 
         // Ask for negotiated rates (optional)
         $rateInformation = new \Ups\Entity\RateInformation;
@@ -153,11 +151,12 @@ class UpsApi extends WP_REST_Controller
         $shipment->setRateInformation($rateInformation);
 
         try {
-            $api = new Ups\Shipping(self::ACCESS_KEY, self::USER_ID, self::PASSWORD);
+            $api = new Ups\Shipping(getenv('ACCESS_KEY'), getenv('USER_ID'), getenv('PASSWORD'));
 
             $confirm = $api->confirm(\Ups\Shipping::REQ_VALIDATE, $shipment);
 
             if ($confirm) {
+
                 $accept = $api->accept($confirm->ShipmentDigest);
                 $folder = get_template_directory() . '/assets/images/ups-label/';
                 if (!file_exists($folder)) {
@@ -169,24 +168,25 @@ class UpsApi extends WP_REST_Controller
                 $ifp = fopen($imageFile, 'wb');
                 fwrite($ifp, base64_decode($base64_string));
                 fclose($ifp);
-                self::traceRecord($request);
 
+                self::traceRecord($request, $label_file, $confirm);
 
-                $transport = (new Swift_SmtpTransport('smtp.gmail.com', 587))
-                    ->setUsername('jcarpizo.it@gmail.com')
-                    ->setPassword('J@8p3r15')->setEncryption('tls');
+                $transport = (new Swift_SmtpTransport(getenv('EMAIL_SMTP'), getenv('EMAIL_PORT')))
+                    ->setUsername(getenv('EMAIL_USERNAME'))
+                    ->setPassword(getenv('EMAIL_PASSWORD'))
+                    ->setEncryption(getenv('EMAIL_ENCRYPTION'));
                 $mailer = new Swift_Mailer($transport);
                 $message = new Swift_Message();
-                $message->setSubject( 'Your UPS Label.');
+                $message->setSubject('Your UPS Label.');
                 $message->setFrom([$shipper->getEmailAddress() => $shipper->getAttentionName()]);
-                $message->addTo('alikhaky@royalmountie.com','Ali Khaky');
-                $message->addBcc('jasper.carpizo.dev@gmail.com','Jasper Carpizo');
-                $message->setBody($shipper->getAttentionName().' UPS Label Image');
+                $message->addTo($request['toaddress_email'], $request['tocompany_name']);
+                $message->setBody($shipper->getAttentionName() . ' UPS Label Image');
                 $message->attach(Swift_Attachment::fromPath($imageFile));
 
                 $result = $mailer->send($message);
 
                 $message = [
+                    'data' => ['shipment_identification_no' => $confirm->ShipmentIdentificationNumber],
                     'message' => 'Successfully Created',
                 ];
                 return new WP_REST_Response($message, 200);
@@ -201,19 +201,7 @@ class UpsApi extends WP_REST_Controller
         }
     }
 
-
-    public static function print_ups_label($folder, $accept)
-    {
-        $label_file = uniqid() . ".gif";
-        $base64_string = $accept->PackageResults->LabelImage->GraphicImage;
-        $ifp = fopen($folder . $label_file, 'wb');
-        var_dump($ifp);
-        //$str = stream_get_contents($ifp);
-        fwrite($ifp, base64_decode($base64_string));
-        fclose($ifp);
-    }
-
-    public static function traceRecord($request)
+    public static function traceRecord($request, $imageFile, $confirm)
     {
         global $wpdb;
 
@@ -240,6 +228,8 @@ class UpsApi extends WP_REST_Controller
                 'to_company_attention_name' => $request['toaddress_attention_name'],
                 'to_company_email' => $request['toaddress_email'],
                 'to_company_phone_number' => $request['toaddress_phone_number'],
+                'ups_label' => $imageFile,
+                'order_id' => $confirm->ShipmentIdentificationNumber
             ]
         );
     }

@@ -31,7 +31,7 @@ class UpsApiTable
           to_company_attention_name varchar(255) DEFAULT NULL,
           to_company_email varchar(255) DEFAULT NULL,
           to_company_phone_number varchar(255) DEFAULT NULL,
-          order_id varchar(255) DEFAULT NULL,
+          shipment_identification_no varchar(255) DEFAULT NULL,
           ups_label varchar(255) DEFAULT NULL,
           datetime_created datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
           PRIMARY KEY (id)
