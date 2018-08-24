@@ -1,11 +1,11 @@
 <?php
 
 /*
-Plugin Name: Ups Restful Api
-Plugin URI: jcarpizo.github.io
-Description: Shipment details and print UPS Label
+Plugin Name: Digital Ape Dental Lab: UPS API
+Plugin URI: https://github.com/jcarpizo/wordpress-ups-api
+Description: Integrate powerful UPS Web-based shipping capabilities to your enterprise applications. The Shipping Application Programming Interface (API) allows you to integrate UPS shipping functionality directly into your website or enterprise system. Your customers will enjoy the depth of UPS services and capabilities, while your business becomes more efficient with improved processes
 Version: 1.0
-Author: Jasper Carpizo
+Author: Digital Ape Full Arch Solutions
 Author URI: https://github.com/jcarpizo/wordpress-ups-api
 */
 

@@ -14,92 +14,37 @@ class UpsApi extends WP_REST_Controller
         }
 
         register_rest_route('ups/v1', '/shipment', [
-                [
-                    'methods' => WP_REST_Server::CREATABLE,
-                    'callback' => array(__CLASS__, 'post_shipment_details'),
-                ]
-            ]);
+            [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array(__CLASS__, 'post_shipment_details'),
+            ]
+        ]);
 
         register_rest_route('ups/v1', '/print/label', [
-                [
-                    'methods' => WP_REST_Server::READABLE,
-                    'callback' => array(__CLASS__, 'print_ups_label'),
-                    'args' => [
-                        [
-                            'orderId' => [
-                                'validate_callback' => 'is_numeric'
-                            ]
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array(__CLASS__, 'print_ups_label'),
+                'args' => [
+                    [
+                        'orderId' => [
+                            'validate_callback' => 'is_numeric'
                         ]
                     ]
                 ]
-            ]);
+            ]
+        ]);
     }
 
     public function post_shipment_details($request)
     {
 
-        $shipment = new Ups\Entity\Shipment;
-        $shipper = $shipment->getShipper();
-        $shipper->setShipperNumber(getenv('SHIPPER_NO'));
-        $shipper->setName(getenv('SHIPPER_NAME'));
-        $shipper->setAttentionName(getenv('SHIPPER_ATTENTION_NAME'));
-        $shipperAddress = $shipper->getAddress();
-        $shipperAddress->setAddressLine1(getenv('SHIPPER_ADDRESS_ONE'));
-        $shipperAddress->setPostalCode(getenv('SHIPPER_POSTAL_CODE'));
-        $shipperAddress->setCity(getenv('SHIPPER_CITY'));
-        $shipperAddress->setStateProvinceCode(getenv('SHIPPER_STATE_PROVINCE_CODE')); // required in US
-        $shipperAddress->setCountryCode(getenv('SHIPPER_COUNTRY_CODE'));
-        $shipper->setAddress($shipperAddress);
-        $shipper->setEmailAddress(getenv('SHIPPER_EMAIL_ADDRESS'));
-        $shipper->setPhoneNumber(getenv('SHIPPER_PHONE_NUMBER'));
-        $shipment->setShipper($shipper);
-
+        list($shipment, $shipper, $shipperAddress) = self::shipperDetails();
         // From address
-        $address = new \Ups\Entity\Address();
-        $address->setAddressLine1($shipperAddress->getAddressLine1());
-        $address->setPostalCode($shipperAddress->getPostalCode());
-        $address->setCity($shipperAddress->getCity());
-        $address->setStateProvinceCode($shipperAddress->getStateProvinceCode());
-        $address->setCountryCode($shipperAddress->getCountryCode());
-        $shipFrom = new \Ups\Entity\ShipFrom();
-        $shipFrom->setAddress($address);
-        $shipFrom->setName($shipper->getAttentionName());
-        $shipFrom->setAttentionName($shipper->getAttentionName());
-        $shipFrom->setCompanyName($shipper->getAttentionName());
-        $shipFrom->setEmailAddress($shipper->getEmailAddress());
-        $shipFrom->setPhoneNumber($shipper->getPhoneNumber());
-        $shipment->setShipFrom($shipFrom);
-
+        $address = self::shipFromAddress($shipperAddress, $shipper, $shipment);
         // To address
-        $address = new \Ups\Entity\Address();
-        $address->setAddressLine1($request['toaddress_one']);
-        $address->setPostalCode($request['toaddress_postal_code']);
-        $address->setCity($request['toaddress_city']);
-        $address->setStateProvinceCode($request['toaddress_province_code']);  // Required in US
-        $address->setCountryCode($request['toaddress_country_code']);
-        $shipTo = new \Ups\Entity\ShipTo();
-        $shipTo->setAddress($address);
-        $shipTo->setCompanyName($request['tocompany_name']);
-        $shipTo->setAttentionName($shipTo->getCompanyName());
-        $shipTo->setEmailAddress($request['toaddress_email']);
-        $shipTo->setPhoneNumber($request['toaddress_phone_number']);
-        $shipment->setShipTo($shipTo);
-
+        list($address, $shipTo) = self::shipToAddress($request, $shipment);
         // Sold to
-        $addressSold = new \Ups\Entity\Address();
-        $addressSold->setAddressLine1($address->getAddressLine1());
-        $addressSold->setPostalCode($address->getPostalCode());
-        $addressSold->setCity($address->getCity());
-        $addressSold->setCountryCode($address->getCountryCode());
-        $addressSold->setStateProvinceCode($address->getStateProvinceCode());
-        $soldTo = new \Ups\Entity\SoldTo;
-        $soldTo->setAddress($addressSold);
-        $soldTo->setAttentionName($shipTo->getAttentionName());
-        $soldTo->setCompanyName($shipTo->getCompanyName());
-        $soldTo->setEmailAddress($shipTo->getEmailAddress());
-        $soldTo->setPhoneNumber($shipTo->getPhoneNumber());
-        $shipment->setSoldTo($soldTo);
-
+        self::soldToAddress($address, $shipTo, $shipment);
         // Set service
         $service = new \Ups\Entity\Service;
         $service->setCode(\Ups\Entity\Service::S_AIR_1DAY);
@@ -180,7 +125,7 @@ class UpsApi extends WP_REST_Controller
                 $message->setBody(
                     '<html>' .
                     ' <body>' .
-                    '  UPS Label / Shipment Identification Number <br/>'.$confirm->ShipmentIdentificationNumber.' <img src="' .
+                    '  UPS Label / Shipment Identification Number <br/>' . $confirm->ShipmentIdentificationNumber . ' <img src="' .
                     $message->embed(Swift_Image::fromPath($imageFile)) .
                     '" alt="Image" />' .
                     ' </body>' .
@@ -231,5 +176,79 @@ class UpsApi extends WP_REST_Controller
                 'shipment_identification_no' => $confirm->ShipmentIdentificationNumber
             ]
         );
+    }
+
+    private static function soldToAddress($address, $shipTo, $shipment)
+    {
+        $addressSold = new \Ups\Entity\Address();
+        $addressSold->setAddressLine1($address->getAddressLine1());
+        $addressSold->setPostalCode($address->getPostalCode());
+        $addressSold->setCity($address->getCity());
+        $addressSold->setCountryCode($address->getCountryCode());
+        $addressSold->setStateProvinceCode($address->getStateProvinceCode());
+        $soldTo = new \Ups\Entity\SoldTo;
+        $soldTo->setAddress($addressSold);
+        $soldTo->setAttentionName($shipTo->getAttentionName());
+        $soldTo->setCompanyName($shipTo->getCompanyName());
+        $soldTo->setEmailAddress($shipTo->getEmailAddress());
+        $soldTo->setPhoneNumber($shipTo->getPhoneNumber());
+        $shipment->setSoldTo($soldTo);
+    }
+
+    private static function shipToAddress($request, $shipment)
+    {
+        $address = new \Ups\Entity\Address();
+        $address->setAddressLine1($request['toaddress_one']);
+        $address->setPostalCode($request['toaddress_postal_code']);
+        $address->setCity($request['toaddress_city']);
+        $address->setStateProvinceCode($request['toaddress_province_code']);  // Required in US
+        $address->setCountryCode($request['toaddress_country_code']);
+        $shipTo = new \Ups\Entity\ShipTo();
+        $shipTo->setAddress($address);
+        $shipTo->setCompanyName($request['tocompany_name']);
+        $shipTo->setAttentionName($shipTo->getCompanyName());
+        $shipTo->setEmailAddress($request['toaddress_email']);
+        $shipTo->setPhoneNumber($request['toaddress_phone_number']);
+        $shipment->setShipTo($shipTo);
+        return array($address, $shipTo);
+    }
+
+    private static function shipFromAddress($shipperAddress, $shipper, $shipment)
+    {
+        $address = new \Ups\Entity\Address();
+        $address->setAddressLine1($shipperAddress->getAddressLine1());
+        $address->setPostalCode($shipperAddress->getPostalCode());
+        $address->setCity($shipperAddress->getCity());
+        $address->setStateProvinceCode($shipperAddress->getStateProvinceCode());
+        $address->setCountryCode($shipperAddress->getCountryCode());
+        $shipFrom = new \Ups\Entity\ShipFrom();
+        $shipFrom->setAddress($address);
+        $shipFrom->setName($shipper->getAttentionName());
+        $shipFrom->setAttentionName($shipper->getAttentionName());
+        $shipFrom->setCompanyName($shipper->getAttentionName());
+        $shipFrom->setEmailAddress($shipper->getEmailAddress());
+        $shipFrom->setPhoneNumber($shipper->getPhoneNumber());
+        $shipment->setShipFrom($shipFrom);
+        return $address;
+    }
+
+    private static function shipperDetails()
+    {
+        $shipment = new Ups\Entity\Shipment;
+        $shipper = $shipment->getShipper();
+        $shipper->setShipperNumber(getenv('SHIPPER_NO'));
+        $shipper->setName(getenv('SHIPPER_NAME'));
+        $shipper->setAttentionName(getenv('SHIPPER_ATTENTION_NAME'));
+        $shipperAddress = $shipper->getAddress();
+        $shipperAddress->setAddressLine1(getenv('SHIPPER_ADDRESS_ONE'));
+        $shipperAddress->setPostalCode(getenv('SHIPPER_POSTAL_CODE'));
+        $shipperAddress->setCity(getenv('SHIPPER_CITY'));
+        $shipperAddress->setStateProvinceCode(getenv('SHIPPER_STATE_PROVINCE_CODE')); // required in US
+        $shipperAddress->setCountryCode(getenv('SHIPPER_COUNTRY_CODE'));
+        $shipper->setAddress($shipperAddress);
+        $shipper->setEmailAddress(getenv('SHIPPER_EMAIL_ADDRESS'));
+        $shipper->setPhoneNumber(getenv('SHIPPER_PHONE_NUMBER'));
+        $shipment->setShipper($shipper);
+        return array($shipment, $shipper, $shipperAddress);
     }
 }
